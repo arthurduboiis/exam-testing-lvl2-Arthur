@@ -11,7 +11,8 @@ describe('LoanService', () => {
 
   beforeEach(() => {
     loanService = new LoanService();
-    // pas mock ici car les classes Book et User sont trop simples
+    // pas nécessaire de mock ici car juste des données il n'y a pas de logique complexe
+    // dans le constructeur de User et Book
     user = new User('u1', 'Alice', 'alice@gmail.com');
     book = new Book('b1', 'Le Petit Prince', 'François Damiens');
     loanService.addUser(user);
