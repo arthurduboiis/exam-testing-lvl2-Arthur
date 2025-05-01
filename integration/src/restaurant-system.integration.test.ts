@@ -5,109 +5,98 @@ import { ICustomer, IProduct, IOrder, IInvoice } from '../src/types';
 describe('Restaurant System Integration Tests', () => {
   let system: RestaurantSystem;
   let customer: ICustomer;
-  let pizza: IProduct;
-  let soda: IProduct;
+  let pasta: IProduct;
+  let juice: IProduct;
 
   beforeEach(() => {
     system = new RestaurantSystem();
 
     customer = system.getCustomerService().createCustomer({
-      name: 'Jean Dupont',
-      email: 'jean@example.com',
-      address: '123 Rue de Paris, 75001 Paris',
-      phone: '+33123456789',
+      name: 'Emma Martin',
+      email: 'emma.martin@example.com',
+      address: '42 Boulevard Haussmann, 75009 Paris',
+      phone: '+33612345678',
     });
 
-    pizza = system.getProductService().createProduct({
-      name: 'Margherita',
-      description: 'Tomate, mozzarella, basilic',
-      price: 12.5,
+    pasta = system.getProductService().createProduct({
+      name: 'Carbonara Pasta',
+      description: 'Creamy sauce with bacon and parmesan',
+      price: 14.0,
       category: 'main',
       available: true,
-      preparationTimeMinutes: 20,
+      preparationTimeMinutes: 25,
     });
 
-    soda = system.getProductService().createProduct({
-      name: 'Cola',
-      description: 'Boisson gazeuse',
-      price: 3.5,
+    juice = system.getProductService().createProduct({
+      name: 'Orange Juice',
+      description: 'Freshly squeezed orange juice',
+      price: 4.0,
       category: 'drink',
       available: true,
-      preparationTimeMinutes: 1,
+      preparationTimeMinutes: 2,
     });
   });
 
-  // Test de création de client
-  it('Créer un client et vérifier ses données', () => {
-    const createdCustomer = system
-      .getCustomerService()
-      .createCustomer({
-        name: 'Jean Dupont',
-        email: 'jean@example.com',
-        address: '123 Rue de Paris, 75001 Paris',
-        phone: '+33123456789',
-      });
+  it('should create a customer and retrieve correct details', () => {
+    const created = system.getCustomerService().createCustomer({
+      name: 'Lucas Moreau',
+      email: 'lucas.moreau@example.com',
+      address: '10 Rue des Lilas, 69007 Lyon',
+      phone: '+33798765432',
+    });
 
-    const foundCustomer = system
-      .getCustomerService()
-      .getCustomer(createdCustomer.id);
-    expect(foundCustomer).toBeDefined();
-    expect(foundCustomer?.email).toBe('jean@example.com');
-    expect(foundCustomer?.name).toBe('Jean Dupont');
-    expect(foundCustomer?.address).toBe(
-      '123 Rue de Paris, 75001 Paris'
-    );
-    expect(foundCustomer?.phone).toBe('+33123456789');
+    const found = system.getCustomerService().getCustomer(created.id);
+    expect(found).toBeDefined();
+    expect(found?.email).toBe('lucas.moreau@example.com');
+    expect(found?.name).toBe('Lucas Moreau');
+    expect(found?.address).toBe('10 Rue des Lilas, 69007 Lyon');
+    expect(found?.phone).toBe('+33798765432');
   });
 
-  // Test de création des produits
-  it('Créer plusieurs produits', () => {
-    const createdPizza = system.getProductService().createProduct({
-      name: 'Margherita',
-      description: 'Tomate, mozzarella, basilic',
-      price: 12.5,
-      category: 'main',
+  it('should create multiple products correctly', () => {
+    const product1 = system.getProductService().createProduct({
+      name: 'Caesar Salad',
+      description: 'Chicken, parmesan, romaine lettuce',
+      price: 10.5,
+      category: 'starter',
       available: true,
-      preparationTimeMinutes: 20,
+      preparationTimeMinutes: 10,
     });
 
-    const createdSoda = system.getProductService().createProduct({
-      name: 'Cola',
-      description: 'Boisson gazeuse',
-      price: 3.5,
+    const product2 = system.getProductService().createProduct({
+      name: 'Apple Juice',
+      description: 'Cold pressed apple juice',
+      price: 3.0,
       category: 'drink',
       available: true,
       preparationTimeMinutes: 1,
     });
 
-    expect(createdPizza).toBeDefined();
-    expect(createdSoda).toBeDefined();
-    expect(createdPizza.name).toBe('Margherita');
-    expect(createdSoda.name).toBe('Cola');
+    expect(product1).toBeDefined();
+    expect(product2).toBeDefined();
+    expect(product1.name).toBe('Caesar Salad');
+    expect(product2.name).toBe('Apple Juice');
   });
 
-  it('Processus de commande complet', () => {
-    const orderItems = [
-      { productId: pizza.id, quantity: 1 },
-      { productId: soda.id, quantity: 2 },
-    ];
+  it('should complete full order process including payment and loyalty', () => {
+    const result = system.processOrder(customer.id, [
+      { productId: pasta.id, quantity: 1 },
+      { productId: juice.id, quantity: 2 },
+    ]);
 
-    const result = system.processOrder(customer.id, orderItems);
     expect(result.order).not.toBeNull();
     expect(result.invoice).not.toBeNull();
 
-    const order = result.order as IOrder;
-    const invoice = result.invoice as IInvoice;
+    const order = result.order!;
+    const invoice = result.invoice!;
 
     expect(order.customerId).toBe(customer.id);
     expect(order.status).toBe('pending');
     expect(order.items.length).toBe(2);
-    expect(order.totalAmount).toBeCloseTo(12.5 + 3.5 * 2);
+    expect(order.totalAmount).toBeCloseTo(22.0); // 14 + 4*2
 
     expect(invoice.orderId).toBe(order.id);
-    expect(invoice.customerId).toBe(customer.id);
-    expect(invoice.totalAmount).toBe(order.totalAmount);
-    expect(invoice.tax).toBeCloseTo(order.totalAmount * 0.1);
+    expect(invoice.tax).toBeCloseTo(2.2);
     expect(invoice.paid).toBe(false);
 
     const paid = system
@@ -125,163 +114,164 @@ describe('Restaurant System Integration Tests', () => {
     const updatedCustomer = system
       .getCustomerService()
       .getCustomer(customer.id);
-    expect(updatedCustomer?.loyaltyPoints).toBe(1); // arrondi
+    expect(updatedCustomer?.loyaltyPoints).toBe(2);
   });
 
-  it("Attribuer les points de fidélité lors d'une commande", () => {
-    const result = system.processOrder(customer.id, [
-      { productId: pizza.id, quantity: 2 },
-    ]);
+  it('should grant loyalty points for a single product order', () => {
+    system.processOrder(customer.id, [
+      { productId: pasta.id, quantity: 3 },
+    ]); // 42€
     const updated = system
       .getCustomerService()
       .getCustomer(customer.id);
-    expect(updated?.loyaltyPoints).toBe(2); // 2x12.5 = 25 => 2 pts
+    expect(updated?.loyaltyPoints).toBe(4);
   });
 
-  it('Attribuer plusieurs points de fidélité pour une commande importante', () => {
-    const result = system.processOrder(customer.id, [
-      { productId: pizza.id, quantity: 4 }, // 12.5 * 4 = 50
-    ]);
+  it('should grant more loyalty points for large order total', () => {
+    system.processOrder(customer.id, [
+      { productId: pasta.id, quantity: 5 },
+    ]); // 70€
     const updated = system
       .getCustomerService()
       .getCustomer(customer.id);
-    expect(updated?.loyaltyPoints).toBe(5); // 50€ => 5 points
+    expect(updated?.loyaltyPoints).toBe(7);
   });
 
-  it('Commande échoue si le produit est indisponible', () => {
-    const unavailable = system.getProductService().createProduct({
-      name: 'Burger',
-      description: 'Boeuf & cheddar',
-      price: 9,
+  it('should fail to create order if product is unavailable', () => {
+    const risotto = system.getProductService().createProduct({
+      name: 'Mushroom Risotto',
+      description: 'Arborio rice with mushrooms and parmesan',
+      price: 13.5,
       category: 'main',
       available: false,
-      preparationTimeMinutes: 15,
+      preparationTimeMinutes: 20,
     });
 
     const result = system.processOrder(customer.id, [
-      { productId: unavailable.id, quantity: 1 },
+      { productId: risotto.id, quantity: 1 },
     ]);
+
     expect(result.order).toBeNull();
     expect(result.invoice).toBeNull();
   });
 
-  it('Produit rendu disponible permet une commande', () => {
-    const burger = system.getProductService().createProduct({
-      name: 'Burger',
-      description: 'Boeuf & cheddar',
-      price: 9,
+  it('should allow order after product availability is updated', () => {
+    const risotto = system.getProductService().createProduct({
+      name: 'Mushroom Risotto',
+      description: 'Arborio rice with mushrooms and parmesan',
+      price: 13.5,
       category: 'main',
       available: false,
-      preparationTimeMinutes: 15,
+      preparationTimeMinutes: 20,
     });
 
-    // Le rendre disponible
     system
       .getProductService()
-      .updateProductAvailability(burger.id, true);
+      .updateProductAvailability(risotto.id, true);
 
     const result = system.processOrder(customer.id, [
-      { productId: burger.id, quantity: 1 },
+      { productId: risotto.id, quantity: 1 },
     ]);
+
     expect(result.order).not.toBeNull();
     expect(result.invoice).not.toBeNull();
   });
 
-  it('Changer le statut de commande', () => {
+  it('should handle order status updates correctly', () => {
     const result = system.processOrder(customer.id, [
-      { productId: pizza.id, quantity: 1 },
+      { productId: pasta.id, quantity: 1 },
     ]);
-    const order = result.order as IOrder;
+    const order = result.order!;
 
-    const success1 = system
-      .getOrderService()
-      .updateOrderStatus(order.id, 'preparing');
-    expect(success1).toBe(true);
+    expect(
+      system
+        .getOrderService()
+        .updateOrderStatus(order.id, 'preparing')
+    ).toBe(true);
     expect(system.getOrderService().getOrder(order.id)?.status).toBe(
       'preparing'
     );
 
-    const success2 = system
-      .getOrderService()
-      .updateOrderStatus(order.id, 'ready');
-    expect(success2).toBe(true);
+    expect(
+      system.getOrderService().updateOrderStatus(order.id, 'ready')
+    ).toBe(true);
     expect(system.getOrderService().getOrder(order.id)?.status).toBe(
       'ready'
     );
 
-    const success3 = system
-      .getOrderService()
-      .updateOrderStatus(order.id, 'delivered');
-    expect(success3).toBe(true);
+    expect(
+      system
+        .getOrderService()
+        .updateOrderStatus(order.id, 'delivered')
+    ).toBe(true);
     expect(system.getOrderService().getOrder(order.id)?.status).toBe(
       'delivered'
     );
   });
 
-  it('Annulation autorisée uniquement si statut "pending"', () => {
+  it('should only allow cancellation when status is "pending"', () => {
     const result = system.processOrder(customer.id, [
-      { productId: pizza.id, quantity: 1 },
+      { productId: pasta.id, quantity: 1 },
     ]);
-    const order = result.order as IOrder;
+    const order = result.order!;
 
-    // Annulation autorisée
-    const cancelled = system.getOrderService().cancelOrder(order.id);
-    expect(cancelled).toBe(true);
+    expect(system.getOrderService().cancelOrder(order.id)).toBe(true);
 
-    // Nouvelle commande
     const second = system.processOrder(customer.id, [
-      { productId: pizza.id, quantity: 1 },
+      { productId: pasta.id, quantity: 1 },
     ]);
-    const secondOrder = second.order as IOrder;
-
-    // Changer statut
+    const secondOrder = second.order!;
     system
       .getOrderService()
       .updateOrderStatus(secondOrder.id, 'preparing');
 
-    // Tentative d’annulation
-    const cancelFail = system
-      .getOrderService()
-      .cancelOrder(secondOrder.id);
-    expect(cancelFail).toBe(false);
+    expect(system.getOrderService().cancelOrder(secondOrder.id)).toBe(
+      false
+    );
   });
 
-  it('Calcul du montant et taxes corrects', () => {
+  it('should correctly calculate order amount and tax', () => {
     const result = system.processOrder(customer.id, [
-      { productId: pizza.id, quantity: 2 }, // 25
-      { productId: soda.id, quantity: 3 }, // 10.5
+      { productId: pasta.id, quantity: 2 }, // 28
+      { productId: juice.id, quantity: 3 }, // 12
     ]);
 
     const order = result.order!;
     const invoice = result.invoice!;
 
-    expect(order.totalAmount).toBeCloseTo(35.5);
-    expect(invoice.totalAmount).toBeCloseTo(35.5);
-    expect(invoice.tax).toBeCloseTo(3.55); // 10%
+    expect(order.totalAmount).toBeCloseTo(40.0);
+    expect(invoice.totalAmount).toBeCloseTo(40.0);
+    expect(invoice.tax).toBeCloseTo(4.0);
   });
 
-  it('Commande avec client inexistant échoue', () => {
-    const result = system.processOrder('invalid_id', [
-      { productId: pizza.id, quantity: 1 },
+  it('should fail to create order if customer does not exist', () => {
+    const result = system.processOrder('unknown_id', [
+      { productId: pasta.id, quantity: 1 },
     ]);
     expect(result.order).toBeNull();
     expect(result.invoice).toBeNull();
   });
 
-  it('Payer une facture déjà payée échoue', () => {
+  it('should not allow double payment of an invoice', () => {
     const result = system.processOrder(customer.id, [
-      { productId: pizza.id, quantity: 1 },
+      { productId: pasta.id, quantity: 1 },
     ]);
     const invoice = result.invoice!;
 
-    const firstPay = system
-      .getInvoiceService()
-      .payInvoice(invoice.id, 'cash');
-    expect(firstPay).toBe(true);
+    expect(
+      system.getInvoiceService().payInvoice(invoice.id, 'cash')
+    ).toBe(true);
+    expect(
+      system.getInvoiceService().payInvoice(invoice.id, 'cash')
+    ).toBe(false);
+  });
 
-    const secondPay = system
-      .getInvoiceService()
-      .payInvoice(invoice.id, 'cash');
-    expect(secondPay).toBe(false);
+  it('should correctly persist order and retrieve from service', () => {
+    const result = system.processOrder(customer.id, [
+      { productId: pasta.id, quantity: 1 },
+    ]);
+    const found = system.getOrderService().getOrder(result.order!.id);
+    expect(found).toBeDefined();
+    expect(found?.id).toBe(result.order!.id);
   });
 });
